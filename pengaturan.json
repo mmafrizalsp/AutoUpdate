@@ -1,0 +1,6 @@
+{
+  "Source": "\\\\172.16.0.190\\exe\\EMR",
+  "Destination": "C:\\==EXE\\EMR",
+  "LogPath": "C:\\==EXE\\EMR\\LogUpdate",
+  "TargetStartApps": "C:\\==EXE\\EMR\\Medifirst2000.ElectronicMedicalRecord.exe"
+}

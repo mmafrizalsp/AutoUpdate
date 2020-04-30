@@ -1,7 +1,10 @@
-﻿using System;
+﻿using AutoUpdateApps.Models;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -9,45 +12,37 @@ namespace AutoUpdateApps
 {
     public partial class MainWindow : Window
     {
-        //public static string source = "D:\\kerjaan\\kanujoso\\Project Kanujoso Pusat\\Production\\MedifirstV2\\Medifirst2000.ElectronicMedicalRecord\\Medifirst2000.ElectronicMedicalRecord\\bin\\Debug";
-        public static string source = @"\\172.16.0.190\\EMR update\\20200421 23.38\\20200421 23.38";
-        public static string destionation = "C:\\==EXE\\EMR";
-        public int sourcecount, destCount;
-        public BackgroundWorker worker = new BackgroundWorker();        
+        public static int sourcecount, destCount;  
 
         public MainWindow()
         {
             InitializeComponent();
             IsDirectoryAvailable();
-
-            //lblJumlah.Content = destCount + " of " + sourcecount;
-            //ProsesUpdate();
         }        
 
         public void IsDirectoryAvailable()
-        {
-            if (Directory.Exists(source))
-                sourcecount = Directory.GetFiles(source, "*", SearchOption.AllDirectories).Length;
+        {            
+            if (Directory.Exists(PengaturanAplikasi.Source))
+                sourcecount = Directory.GetFiles(PengaturanAplikasi.Source, "*", SearchOption.AllDirectories).Length;
             else
                 sourcecount = 0;
 
-            if (Directory.Exists(destionation))
-                destCount = Directory.GetFiles(destionation, "*", SearchOption.AllDirectories).Length;
+            if (Directory.Exists(PengaturanAplikasi.Destination))
+                destCount = Directory.GetFiles(PengaturanAplikasi.Destination, "*", SearchOption.AllDirectories).Length;
             else
                 destCount = 0;            
         }
 
         public static void ProsesUpdate()
         {
-            Copy(source, destionation);
-            MessageBox.Show("Update berhasil");
+            Copy(PengaturanAplikasi.Source, PengaturanAplikasi.Destination);
+            NotifTransaksi();
 
-            Application.Current.Shutdown();
-
-            Process EMR = new Process();
-            EMR.StartInfo.FileName = "C:\\==EXE\\EMR\\Medifirst2000.ElectronicMedicalRecord.exe";
-            EMR.Start();
-        }
+            //dimatikan, karena statis ke aplikasi tujuan
+            //Process EMR = new Process();
+            //EMR.StartInfo.FileName = Pengaturan.TargetStartApps;
+            //EMR.Start();            
+        }        
 
         public static void Copy(string sourceDirectory, string targetDirectory)
         {
@@ -60,19 +55,43 @@ namespace AutoUpdateApps
             }
             else
             {
-                Directory.Delete(destionation, true);
+                Directory.Delete(PengaturanAplikasi.Destination, true);
                 CopyAll(diSource, diTarget);
             }
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() => {
+        {            
+            Dispatcher.Invoke(DispatcherPriority.Render, new Action(() =>
+            {
                 Dispatcher.Invoke(DispatcherPriority.Background, new Action(() =>
                 {
                     ProsesUpdate();
+                    for (int i = 1; i < sourcecount; i++)
+                    {
+                        ThreadPool.QueueUserWorkItem(new WaitCallback(TaskCallBack), i);
+                        Thread.Sleep(0);
+                    }
                 }));
             }));
+        }
+         
+        public void TaskCallBack(object ThreadNumber)
+        {
+            string ThreadName = "Thread " + ThreadNumber.ToString();
+            for (int i = 1; i < sourcecount; i++)            
+                lblJumlah.Content = ThreadName + " :" + i.ToString();
+            
+            MessageBox.Show(ThreadName = " Finished");
+        }
+
+        public static void NotifTransaksi()
+        {
+            MessageBoxResult result = MessageBox.Show("proses update selesai", "Electonic Medical Record", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (result == MessageBoxResult.OK)
+            {
+                Application.Current.Shutdown();
+            }
         }
 
         public static void CopyAll(DirectoryInfo source, DirectoryInfo target)
@@ -82,7 +101,7 @@ namespace AutoUpdateApps
             foreach (FileInfo fi in source.GetFiles())
             {
                 Console.WriteLine(@"Copying {0}\{1}", target.FullName, fi.Name);
-                fi.CopyTo(System.IO.Path.Combine(target.FullName, fi.Name), true);
+                fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
             }
 
             foreach (DirectoryInfo diSourceSubDir in source.GetDirectories())

@@ -12,5 +12,6 @@
             <local:LoadingControl Diameter="60" Color1="Green" Color2="Transparent"/>
             <Label Content="Proses Update Berjalan" VerticalAlignment="Center" FontSize="25" Margin="10,0,0,0"/>
         </StackPanel>
+        <Label x:Name="lblJumlah"/>
     </Grid>
 </Window>
